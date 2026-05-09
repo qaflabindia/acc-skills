@@ -1,0 +1,17 @@
+{
+  "last_updated": "2026-05-09T23:57:03.371379+00:00",
+  "governance_mode": "standard",
+  "environment": "unknown",
+  "risk_tolerance": {
+    "production": "low",
+    "staging": "medium",
+    "test": "high",
+    "local": "high"
+  },
+  "active_agents": [],
+  "execution_queue_size": 0,
+  "last_halt_at": null,
+  "last_escalation_at": null,
+  "session_action_count": 0,
+  "session_halt_count": 0
+}

@@ -1,0 +1,9 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-05-09T23:57:03.372293+00:00",
+  "agent_baselines": {},
+  "halt_episodes": [],
+  "escalation_episodes": [],
+  "override_attempts": [],
+  "loop_detections": []
+}

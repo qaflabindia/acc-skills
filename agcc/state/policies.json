@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-05-09T23:57:03.372037+00:00",
+  "execution_policy": {
+    "production_confidence_threshold": 0.75,
+    "max_cascade_risk": 0.85,
+    "max_uncertainty": 0.8,
+    "behavioral_anomaly_threshold": 0.85,
+    "require_auth_for_irreversible": true,
+    "audit_all_decisions": true
+  },
+  "override_policy": {
+    "low_risk_max": 0.25,
+    "medium_risk_max": 0.5,
+    "high_risk_max": 0.75,
+    "critical_risk_threshold": 0.75
+  },
+  "escalation_policy": {
+    "escalation_targets": [
+      "human_operator"
+    ],
+    "escalation_timeout_minutes": 30,
+    "auto_defer_on_no_response": true
+  },
+  "rate_limits": {
+    "max_actions_per_minute": 10,
+    "max_production_actions_per_hour": 20,
+    "loop_detection_window_seconds": 60,
+    "loop_detection_threshold": 5
+  },
+  "scope_permissions": {}
+}
