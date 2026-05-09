@@ -1,0 +1,33 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-05-09T09:58:41.907409+00:00",
+  "reserve_policy": {
+    "emergency_reserve_minimum": 50000,
+    "description": "Minimum balance that must always remain untouched"
+  },
+  "transfer_policy": {
+    "new_beneficiary_delay_hours": 12,
+    "new_beneficiary_threshold": 10000,
+    "high_value_threshold": 50000,
+    "high_value_delay_hours": 24
+  },
+  "fraud_response_policy": {
+    "auto_block_fraud_probability": 0.8,
+    "escalate_fraud_probability": 0.6,
+    "urgency_delay_threshold": 0.5
+  },
+  "budget_limits": {
+    "food": 0,
+    "travel": 0,
+    "entertainment": 0,
+    "shopping": 0,
+    "subscriptions": 0,
+    "other_discretionary": 0
+  },
+  "override_policy": {
+    "low_risk_max": 0.25,
+    "medium_risk_max": 0.5,
+    "high_risk_max": 0.75,
+    "critical_risk_threshold": 0.75
+  }
+}

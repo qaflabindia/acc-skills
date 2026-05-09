@@ -1,0 +1,27 @@
+{
+  "last_updated": "2026-05-09T09:58:41.890328+00:00",
+  "balances": {
+    "bank_balance": 85000,
+    "wallet_balance": 0,
+    "savings_balance": 0,
+    "emergency_reserve_balance": 50000,
+    "credit_card_available_limit": 0
+  },
+  "obligations": {
+    "rent": 25000,
+    "emi": 18000,
+    "insurance": 0,
+    "utilities": 0,
+    "school_fees": 0,
+    "subscriptions": 0,
+    "credit_card_due": 0,
+    "other": 0
+  },
+  "inflows": {
+    "salary_expected_date": null,
+    "salary_amount": 0,
+    "freelance_income": 0,
+    "reimbursements": 0
+  },
+  "upcoming_30d": []
+}
