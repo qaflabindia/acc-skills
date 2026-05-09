@@ -2,76 +2,86 @@
 name: finance-command-centre
 cache_control: ephemeral
 description: >
-  Agentic Finance Command Centre (AFCC) — 5-layer constitutional payment
+  Agentic Finance Command Centre (AFCC) — 6-layer constitutional payment
   governor. Auto-triggers on any payment intent. Verdicts: APPROVE /
   APPROVE_WITH_ADVISORY / DELAY / RESTRICT / ESCALATE / BLOCK.
   Triggers: pay / transfer / send money / should I pay / is this a scam /
   parcel clearance / KYC block / book / invest / semester fee / rent / EMI
 ---
 
-# AFCC — Runtime Spec (compact)
+# AFCC — Agentic Finance Command Centre
 
 `SKILL_DIR` = directory containing this file.
 
 ---
 
-## BOOT — run once per session
+## BOOT — Run once per session
 
 ```bash
 python SKILL_DIR/scripts/init_afcc.py
 ```
+
 Emit **one line**: `AFCC: [bank balance] · [N] policies`
-If status `fresh`: ask user for bank balance, reserve floor, monthly obligations before proceeding.
+
+If status is `fresh`: ask the user for bank balance, reserve floor, and monthly obligations before proceeding.
 
 ---
 
-## TRIGGER — activate when message contains
+## TRIGGER — Activate when message contains
 
 pay · transfer · send · invest · deposit · book · clear · "shall I pay" ·
 "should I transfer" · parcel · customs · KYC · police + payment · any ₹ amount
 
 ---
 
-## PHASE 1 — INTAKE (Capability)
+## Layer 1 — INTAKE  `[Weight: 10%]`
 
-Extract (default unknown if not stated):
+**Purpose:** Extract all payment parameters required for accurate downstream evaluation. Missing or defaulted fields degrade every subsequent layer — always ask for `amount` if not stated.
+
+Extract (default: `unknown` if not stated):
 
 | Field | Extract |
 |-------|---------|
-| `amount` | numeric — **ask if missing** |
-| `type` | rent/emi/electricity/utility/insurance/tax/school_fee/food/shopping/transfer/investment/other |
-| `urgency` | none/low/medium/high/extreme |
-| `new_beneficiary` | true/false |
-| `authority_claimed` | true/false |
-| `authority_verified` | false (always false unless user confirms independent callback) |
-| `reason` | brief text |
+| `amount` | Numeric — **ask if missing** |
+| `type` | rent / emi / electricity / utility / insurance / tax / school_fee / food / shopping / transfer / investment / other |
+| `urgency` | none / low / medium / high / extreme |
+| `new_beneficiary` | true / false |
+| `authority_claimed` | true / false |
+| `authority_verified` | Always `false` unless user confirms an independent callback was completed |
+| `reason` | Brief text |
 
-Load state:
+Load state after extraction:
 ```bash
 python SKILL_DIR/scripts/load_state.py
 ```
 
 ---
 
-## PHASE 2 — SCORE (Cognition)
+## Layer 2 — SCORE  `[Weight: 30%]`
 
-Score 0.00–1.00, higher = more risk:
+**Purpose:** Independently quantify 7 risk dimensions (0.00–1.00, higher = more risk). These scores are the primary input to the verdict engine. No dimension is collapsed into another.
 
-| Score | Formula / rule |
+| Score | Formula / Rule |
 |-------|----------------|
 | `fraud_prob` | Pattern match vs `references/scam_patterns.md` |
-| `liquidity_risk` | `(bank - amount - monthly_obligations - reserve_floor) / bank`; clamp 0-1; invert |
-| `urgency_score` | none=0 · low=0.2 · medium=0.4 · high=0.7 · extreme=0.95; +0.35 if authority_claimed |
-| `beneficiary_trust` | 0.95 institutional · 0.50 known-individual · 0.10 new/unknown |
-| `obligation_priority` | 0.95 school_fee/rent/emi/tax · 0.70 utility · 0.05 discretionary |
-| `panic_prob` | 0 calm · 0.5 confused · 0.9 distressed |
+| `liquidity_risk` | `(bank − amount − monthly_obligations − reserve_floor) / bank`; clamp 0–1; invert |
+| `urgency_score` | none=0.00 · low=0.20 · medium=0.40 · high=0.70 · extreme=0.95; add 0.35 if `authority_claimed=true` |
+| `beneficiary_trust` | 0.95 institutional · 0.50 known individual · 0.10 new or unknown |
+| `obligation_priority` | 0.95 school_fee / rent / emi / tax · 0.70 utility · 0.05 discretionary |
+| `panic_prob` | 0.00 calm · 0.50 confused · 0.90 distressed |
 | `legitimacy` | 0.99 routine · 0.50 unusual · 0.05 implausible |
 
-`execution_confidence = 1 − max(fraud×1.4, urgency×1.2, 1−legitimacy, liquidity, (1−trust)×0.7)` clamp 0-1
+**Composite execution confidence:**
+```
+execution_confidence = 1 − max(fraud×1.4, urgency×1.2, 1−legitimacy, liquidity, (1−trust)×0.7)
+```
+Clamp result to 0–1.
 
 ---
 
-## PHASE 3 — CONTROL (run script)
+## Layer 3 — CONTROL  `[Weight: 25%]`
+
+**Purpose:** Translate Layer 2 scores into a structured verdict by running the evaluation script against loaded policies and thresholds. The script returns `compact_verdict` and a `flags` list.
 
 ```bash
 python SKILL_DIR/scripts/evaluate.py \
@@ -83,62 +93,100 @@ python SKILL_DIR/scripts/evaluate.py \
   --format compact
 ```
 
-Script returns `compact_verdict` string + `flags` list.
+Read `compact.verdict` and `compact.flags` from script output before proceeding to Layer 4.
 
 ---
 
-## PHASE 4-5 — COLLABORATION + GOVERNANCE (inline, terse)
+## Layer 4 — COLLABORATION  `[Weight: 15%]`
 
-Only compute explicitly when verdict ≠ APPROVE. Check:
-- Any agent VETO? (scam agent if fraud>0.8 · policy agent if CR violated)
-- Any CR violated? (see `references/constitutional_rules.md`)
+**Purpose:** Run a multi-agent panel to validate the Layer 3 verdict from independent domain perspectives. Each agent holds a single-domain veto. Skipped only when verdict is APPROVE and no score exceeds the advisory threshold.
+
+| Agent | Activates When | Action |
+|-------|---------------|--------|
+| Scam Agent | `fraud_prob > 0.50` | Issues veto if `fraud_prob ≥ 0.80` → escalate to BLOCK |
+| Policy Agent | Any CR flagged by Layer 3 | Issues veto if constitutional rule is violated |
+| Liquidity Agent | `liquidity_risk > 0.60` | Advisory only — no veto, adds flag to output |
+
+If any agent issues a veto: override the Layer 3 verdict with BLOCK and record the veto source in `flags`.
 
 ---
 
-## PHASE 6 — AUDIT
+## Layer 5 — GOVERNANCE  `[Weight: 15%]`
+
+**Purpose:** Apply immutable constitutional rules that no cognitive score, user instruction, urgency claim, or agent output can override. This layer is the system's last line of defence before execution.
+
+Check all rules against `references/constitutional_rules.md` in priority order:
+
+| Priority | Rule | Trigger | Effect | Override |
+|----------|------|---------|--------|----------|
+| 1 | CR-07 Scam Veto | `fraud_prob ≥ auto_block_threshold` | BLOCK | DISABLED |
+| 2 | CR-01 Unverified Authority | `authority_claimed=true` AND `authority_verified=false` | BLOCK | DISABLED |
+| 3 | CR-02 Reserve Floor | Post-payment balance < reserve floor AND payment is discretionary | BLOCK | DISABLED |
+| 4 | CR-04 Cooling Period | `new_beneficiary=true` AND `amount > high_value_threshold` | DELAY N hours | CONDITIONAL |
+| 5 | CR-03 Urgency ≠ Legitimacy | `urgency_manipulation_score > 0.50` | Mandatory delay; delay increases with urgency | CONDITIONAL |
+| 6 | CR-06 Policy Governs Impulse | Active policy violated during transaction | RESTRICT | CONDITIONAL |
+| 7 | CR-08 No Policy Mutation Under Pressure | Policy change requested while `fraud_prob > 0.40` OR `panic_prob > 0.50` | Refuse + audit | DISABLED |
+| 8 | CR-05 All Decisions Audited | Every verdict, including APPROVE | Record to audit trail | NONE |
+
+When two rules conflict, the higher-priority rule prevails. In practice they rarely conflict because they operate on separate dimensions.
+
+---
+
+## Layer 6 — AUDIT  `[Weight: 5%]`
+
+**Purpose:** Write an immutable record of every decision to the audit trail. Execution without a recorded audit entry is not governed execution. This call is not optional for any verdict.
 
 ```bash
-python SKILL_DIR/scripts/audit.py --record '{"amount":A,"type":"T","verdict":"V","fraud_prob":F,"liquidity_risk":L,"explanation":"..."}'
+python SKILL_DIR/scripts/audit.py --record \
+  '{"amount":A,"type":"T","verdict":"V","fraud_prob":F,"liquidity_risk":L,"explanation":"..."}'
 ```
+
+If the write fails, hold execution until the audit succeeds.
 
 ---
 
 ## OUTPUT FORMAT
 
-**Default (all cases) — emit exactly this, nothing more:**
+**Default — emit exactly one line for every evaluation:**
 ```
 AFCC: [VERDICT] · ₹[amount] → [type] | [flags or "clean"]
 ```
+
 Examples:
 ```
 AFCC: APPROVE · ₹4,000 → electricity | clean
-AFCC: BLOCK · ₹? → police-transfer | CR-01 unverified-authority · scam-veto P-01 (0.95)
+AFCC: BLOCK · ₹? → police-transfer | CR-01 unverified-authority · scam-veto (0.95)
 AFCC: DELAY 12h · ₹30,000 → new-beneficiary | new-account cooling-period
 AFCC: APPROVE_WITH_ADVISORY · ₹25,000 → school_fee | month-end reserve squeeze — pay after salary
 ```
 
-**Detailed output — only when user says "explain", "why", "full analysis", "show breakdown":**
-Emit full cognitive scores table + agent panel + constitutional status.
+**Detailed output** — only when user says "explain", "why", "full analysis", or "show breakdown":
+Emit the full scoring table (Layer 2), agent panel results (Layer 4), and constitutional rule status (Layer 5).
 
 ---
 
-## SPECIAL COMMANDS (no full evaluation needed)
+## VERDICT HIERARCHY
+
+| Verdict | Meaning | User Override |
+|---------|---------|---------------|
+| APPROVE | Safe to execute | Allowed |
+| APPROVE_WITH_ADVISORY | Safe, but note the flagged risk | Allowed |
+| DELAY | Wait N hours and verify before proceeding | Conditional |
+| RESTRICT | Execute only up to ₹X | Allowed |
+| ESCALATE | Verify independently before any payment | Conditional |
+| BLOCK | Do not pay under any circumstances | DISABLED |
+
+A BLOCK verdict cannot be waived by the user, by urgency, or by any authority claim.
+
+---
+
+## SPECIAL COMMANDS
 
 | Command | Action |
 |---------|--------|
-| `show state` / `financial state` | `load_state.py` → format summary |
+| `show state` / `financial state` | `load_state.py` → display summary |
 | `audit trail` | `audit.py --list` |
-| `update balance` | prompt → `update_state.py` |
-| `add beneficiary` | prompt → `update_state.py` |
-| `set policy` | prompt → `update_state.py` |
-| `afcc reset` | confirm → `init_afcc.py --reset` |
-
----
-
-## CONSTITUTIONAL HARD RULES (never override)
-
-1. Authority claimed + unverified → **BLOCK**, override DISABLED
-2. fraud_prob ≥ 0.80 → **BLOCK**, override DISABLED
-3. Discretionary payment breaches reserve floor → **BLOCK**
-4. Urgency ↑ scrutiny ↑ — never urgency ↓ scrutiny
-5. Every decision → audit trail (no silent governance)
+| `update balance` | Prompt for new balance → `update_state.py` |
+| `add beneficiary` | Prompt for details → `update_state.py` |
+| `set policy` | Prompt for policy change → `update_state.py` |
+| `afcc reset` | Confirm with user → `init_afcc.py --reset` |
