@@ -2,15 +2,15 @@
 name: relationship-command-centre
 cache_control: ephemeral
 description: >
-  Agentic Relationship Command Centre (RCC) — 5-layer governed relational
+  Agentic Relationship Command Centre (ARCC) — 5-layer governed relational
   cognition skill. Auto-triggers on relationship signals. Verdicts: STABLE /
   NUDGE / ADVISORY / INTERVENE / PROTECT.
   Triggers: partner / friend / family / conflict / drifting / haven't talked /
-  miss / follow up / relationship state / how is my / rcc / commitment / tension /
+  miss / follow up / relationship state / how is my / arcc / commitment / tension /
   anniversary / argument / burnout / boundary / toxic / exhausted / lonely
 ---
 
-# RCC — Agentic Relationship Command Centre
+# ARCC — Agentic Relationship Command Centre
 
 `SKILL_DIR` = directory containing this file.
 
@@ -19,10 +19,10 @@ description: >
 ## BOOT — Run once per session
 
 ```bash
-python SKILL_DIR/scripts/init_rcc.py
+python SKILL_DIR/scripts/init_arcc.py
 ```
 
-Emit **one line**: `RCC: [N] relationships · [N] policies`
+Emit **one line**: `ARCC: [N] relationships · [N] policies`
 
 If status is `fresh`: inform the user the graph is empty and invite them to add
 relationships with the `add relationship` command.
@@ -188,16 +188,16 @@ Audit is mandatory for every verdict including STABLE.
 
 **Default — emit exactly one line for every evaluation:**
 ```
-RCC: [VERDICT] · [person] → [relationship_type] | [flag_str or "healthy"]
+ARCC: [VERDICT] · [person] → [relationship_type] | [flag_str or "healthy"]
 ```
 
 Examples:
 ```
-RCC: STABLE · Partner → partner | healthy
-RCC: NUDGE · Priya → friend | drift_score_0.35_mild_continuity_gap
-RCC: ADVISORY · Mum → family | reciprocity_imbalance_0.68 · drift_score_0.61
-RCC: INTERVENE · Ravi → work | high_tension_0.75_active_conflict
-RCC: PROTECT · Partner → partner | boundary_risk_0.85_exceeds_protect_threshold
+ARCC: STABLE · Partner → partner | healthy
+ARCC: NUDGE · Priya → friend | drift_score_0.35_mild_continuity_gap
+ARCC: ADVISORY · Mum → family | reciprocity_imbalance_0.68 · drift_score_0.61
+ARCC: INTERVENE · Ravi → work | high_tension_0.75_active_conflict
+ARCC: PROTECT · Partner → partner | boundary_risk_0.85_exceeds_protect_threshold
 ```
 
 **Detailed output** — only when user says "explain", "why", "full analysis",
@@ -241,13 +241,13 @@ Only offer one action. Do not stack multiple suggestions.
 
 | Command | Action |
 |---------|--------|
-| `relationship state` / `rcc state` | `load_state.py` → display summary |
+| `relationship state` / `arcc state` | `load_state.py` → display summary |
 | `relationship insights` / `show insights` | `show_insights.py` → full dashboard |
-| `interaction log` / `rcc history` | `audit.py --list` |
+| `interaction log` / `arcc history` | `audit.py --list` |
 | `add relationship [name]` | `update_state.py --add-relationship {...}` |
 | `log contact [name]` | `update_state.py --log-contact {...}` |
 | `set tension [name] [level]` | `update_state.py --set-tension {...}` |
 | `add commitment [name]` | `update_state.py --add-commitment {...}` |
 | `resolve commitment [description]` | `update_state.py --resolve-commitment {...}` |
 | `set policy [path] [value]` | `update_state.py --set-policy {...}` |
-| `rcc reset` | Confirm with user → `init_rcc.py --reset` |
+| `arcc reset` | Confirm with user → `init_arcc.py --reset` |
